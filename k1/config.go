@@ -207,7 +207,7 @@ func ParseConfig(filename string) (*KoneConfig, error) {
 	cfg := new(KoneConfig)
 
 	// set default value
-	cfg.General.Network = "10.192.0.1/16"
+	cfg.General.Network = "198.18.0.1/15"
 
 	cfg.TCP.ListenPort = 82
 	cfg.TCP.NatPortStart = 10000
