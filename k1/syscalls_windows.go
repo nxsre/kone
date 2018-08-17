@@ -1,8 +1,3 @@
-//
-//   date  : 2017-07-20
-//   author: xjdrew
-//
-
 package k1
 
 import (

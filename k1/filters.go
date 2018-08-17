@@ -1,14 +1,9 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
 	"io"
 
-	"github.com/xjdrew/kone/tcpip"
+	"github.com/FlowerWrong/kone/tcpip"
 )
 
 type PacketFilter interface {

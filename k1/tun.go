@@ -1,8 +1,3 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
@@ -10,7 +5,7 @@ import (
 
 	"github.com/songgao/water"
 
-	"github.com/xjdrew/kone/tcpip"
+	"github.com/FlowerWrong/kone/tcpip"
 )
 
 var MTU = 1500

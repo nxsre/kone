@@ -1,15 +1,10 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
 	"net"
 	"testing"
 
-	"github.com/xjdrew/kone/tcpip"
+	"github.com/FlowerWrong/kone/tcpip"
 )
 
 func checkCases(t *testing.T, proxy string, pattern Pattern, cases map[interface{}]bool) {

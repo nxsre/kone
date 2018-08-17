@@ -1,8 +1,3 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
@@ -10,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/xjdrew/kone/geoip"
-	"github.com/xjdrew/kone/tcpip"
+	"github.com/FlowerWrong/kone/geoip"
+	"github.com/FlowerWrong/kone/tcpip"
 )
 
 const (

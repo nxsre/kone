@@ -1,15 +1,10 @@
-//
-//   date  : 2016-09-24
-//   author: xjdrew
-//
-
 package k1
 
 import (
 	"hash/adler32"
 	"net"
 
-	"github.com/xjdrew/kone/tcpip"
+	"github.com/FlowerWrong/kone/tcpip"
 )
 
 const DnsIPPoolMaxSpace = 0x3ffff // 4*65535

@@ -1,8 +1,3 @@
-//
-//   date  : 2016-02-18
-//   author: xjdrew
-//
-
 package main
 
 import (
@@ -10,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/xjdrew/kone/internal"
-	"github.com/xjdrew/kone/k1"
+	. "github.com/FlowerWrong/kone/internal"
+	"github.com/FlowerWrong/kone/k1"
 )
 
 var VERSION = "0.2-dev"
