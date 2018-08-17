@@ -36,12 +36,16 @@ type ProxyConfig struct {
 	Default bool
 }
 
+// https://manual.nssurge.com/policy.html
+// There are 3 types of policies: PROXY, DIRECT and REJECT
 type PatternConfig struct {
+	Policy string
 	Proxy  string
 	Scheme string
 	V      []string
 }
 
+// There are 5 types of rules: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, IP-COUNTRY and IP-CIDR
 type RuleConfig struct {
 	Pattern []string
 	Final   string

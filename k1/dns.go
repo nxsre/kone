@@ -94,6 +94,12 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	one := d.one
 
 	domain := dnsutil.TrimDomainName(r.Question[0].Name, ".")
+
+	// if is a reject domain
+	if one.rule.Reject(domain) {
+		return nil, errors.New(domain + "is a reject domain")
+	}
+
 	// if is a non-proxy-domain
 	if one.dnsTable.IsNonProxyDomain(domain) {
 		return d.resolve(r)

@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	schemeDomain        = "DOMAIN"
 	schemeDomainSuffix  = "DOMAIN-SUFFIX"
 	schemeDomainKeyword = "DOMAIN-KEYWORD"
 	schemeIPCountry     = "IP-COUNTRY"
@@ -18,19 +19,72 @@ const (
 
 type Pattern interface {
 	Name() string
+	Policy() string
 	Proxy() string
 	Match(val interface{}) bool
 }
 
+// DOMAIN
+type DomainPattern struct {
+	name   string
+	policy string
+	proxy  string
+	vals   map[string]bool
+}
+
+func (p *DomainPattern) Name() string {
+	return p.name
+}
+
+func (p *DomainPattern) Policy() string {
+	return p.policy
+}
+
+func (p *DomainPattern) Proxy() string {
+	return p.proxy
+}
+
+func (p *DomainPattern) Match(val interface{}) bool {
+	v, ok := val.(string)
+	if !ok {
+		return false
+	}
+	v = strings.ToLower(v)
+	if p.vals[v] {
+		return true
+	}
+	return false
+}
+
+func NewDomainPattern(name, policy, proxy string, vals []string) Pattern {
+	p := new(DomainPattern)
+	p.name = name
+	p.policy = policy
+	p.proxy = proxy
+	p.vals = make(map[string]bool)
+	for _, val := range vals {
+		val = strings.ToLower(val)
+		if len(val) > 0 { // ignore empty
+			p.vals[val] = true
+		}
+	}
+	return p
+}
+
 // DOMAIN-SUFFIX
 type DomainSuffixPattern struct {
-	name  string
-	proxy string
-	vals  map[string]bool
+	name   string
+	policy string
+	proxy  string
+	vals   map[string]bool
 }
 
 func (p *DomainSuffixPattern) Name() string {
 	return p.name
+}
+
+func (p *DomainSuffixPattern) Policy() string {
+	return p.policy
 }
 
 func (p *DomainSuffixPattern) Proxy() string {
@@ -65,9 +119,10 @@ func (p *DomainSuffixPattern) AddDomain(val string) {
 	}
 }
 
-func NewDomainSuffixPattern(name string, proxy string, vals []string) Pattern {
+func NewDomainSuffixPattern(name, policy, proxy string, vals []string) Pattern {
 	p := new(DomainSuffixPattern)
 	p.name = name
+	p.policy = policy
 	p.proxy = proxy
 	p.vals = make(map[string]bool)
 	for _, val := range vals {
@@ -78,13 +133,18 @@ func NewDomainSuffixPattern(name string, proxy string, vals []string) Pattern {
 
 // DOMAIN-KEYWORD
 type DomainKeywordPattern struct {
-	name  string
-	proxy string
-	vals  map[string]bool
+	name   string
+	policy string
+	proxy  string
+	vals   map[string]bool
 }
 
 func (p *DomainKeywordPattern) Name() string {
 	return p.name
+}
+
+func (p *DomainKeywordPattern) Policy() string {
+	return p.policy
 }
 
 func (p *DomainKeywordPattern) Proxy() string {
@@ -105,9 +165,10 @@ func (p *DomainKeywordPattern) Match(val interface{}) bool {
 	return false
 }
 
-func NewDomainKeywordPattern(name string, proxy string, vals []string) Pattern {
+func NewDomainKeywordPattern(name, policy, proxy string, vals []string) Pattern {
 	p := new(DomainKeywordPattern)
 	p.name = name
+	p.policy = policy
 	p.proxy = proxy
 	p.vals = make(map[string]bool)
 	for _, val := range vals {
@@ -121,13 +182,18 @@ func NewDomainKeywordPattern(name string, proxy string, vals []string) Pattern {
 
 // IP-COUNTRY
 type IPCountryPattern struct {
-	name  string
-	proxy string
-	vals  map[string]bool
+	name   string
+	policy string
+	proxy  string
+	vals   map[string]bool
 }
 
 func (p *IPCountryPattern) Name() string {
 	return p.name
+}
+
+func (p *IPCountryPattern) Policy() string {
+	return p.policy
 }
 
 func (p *IPCountryPattern) Proxy() string {
@@ -146,9 +212,10 @@ func (p *IPCountryPattern) Match(val interface{}) bool {
 	return p.vals[country]
 }
 
-func NewIPCountryPattern(name string, proxy string, vals []string) Pattern {
+func NewIPCountryPattern(name, policy, proxy string, vals []string) Pattern {
 	p := new(IPCountryPattern)
 	p.name = name
+	p.policy = policy
 	p.proxy = proxy
 	p.vals = make(map[string]bool)
 	for _, val := range vals {
@@ -192,13 +259,18 @@ func (a IPRangeArray) ContainsIP(ip net.IP) bool {
 
 // IP-CIDR
 type IPCIDRPattern struct {
-	name  string
-	proxy string
-	vals  IPRangeArray
+	name   string
+	policy string
+	proxy  string
+	vals   IPRangeArray
 }
 
 func (p *IPCIDRPattern) Name() string {
 	return p.name
+}
+
+func (p *IPCIDRPattern) Policy() string {
+	return p.policy
 }
 
 func (p *IPCIDRPattern) Proxy() string {
@@ -216,9 +288,10 @@ func (p *IPCIDRPattern) Match(val interface{}) bool {
 	return false
 }
 
-func NewIPCIDRPattern(name string, proxy string, vals []string) Pattern {
+func NewIPCIDRPattern(name, policy, proxy string, vals []string) Pattern {
 	p := new(IPCIDRPattern)
 	p.name = name
+	p.policy = policy
 	p.proxy = proxy
 	for _, val := range vals {
 		if _, ipNet, err := net.ParseCIDR(val); err == nil {
@@ -235,10 +308,11 @@ func NewIPCIDRPattern(name string, proxy string, vals []string) Pattern {
 	return p
 }
 
-var patternSchemes map[string]func(string, string, []string) Pattern
+var patternSchemes map[string]func(string, string, string, []string) Pattern
 
 func init() {
-	patternSchemes = make(map[string]func(string, string, []string) Pattern)
+	patternSchemes = make(map[string]func(string, string, string, []string) Pattern)
+	patternSchemes[schemeDomain] = NewDomainPattern
 	patternSchemes[schemeDomainSuffix] = NewDomainSuffixPattern
 	patternSchemes[schemeDomainKeyword] = NewDomainKeywordPattern
 	patternSchemes[schemeIPCountry] = NewIPCountryPattern
@@ -252,7 +326,8 @@ func IsExistPatternScheme(scheme string) bool {
 
 func CreatePattern(name string, config *PatternConfig) Pattern {
 	if f := patternSchemes[config.Scheme]; f != nil {
-		return f(name, config.Proxy, config.V)
+		logger.Infof("[pattern] name: %s, Scheme: %s, Policy: %s, Proxy: %s", name, config.Scheme, config.Policy, config.Proxy)
+		return f(name, config.Policy, config.Proxy, config.V)
 	}
 	return nil
 }

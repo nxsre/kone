@@ -11,6 +11,16 @@ func (rule *Rule) DirectDomain(domain string) {
 	pattern.AddDomain(domain)
 }
 
+func (rule *Rule) Reject(val interface{}) bool {
+	for _, pattern := range rule.patterns {
+		if pattern.Match(val) && pattern.Policy() == REJECT_POLICY {
+			logger.Debugf("[rule] %v -> %s: reject", val, pattern.Name())
+			return true
+		}
+	}
+	return false
+}
+
 // match a proxy for target `val`
 func (rule *Rule) Proxy(val interface{}) (bool, string) {
 	for _, pattern := range rule.patterns {
@@ -27,7 +37,7 @@ func (rule *Rule) Proxy(val interface{}) (bool, string) {
 func NewRule(config RuleConfig, patterns map[string]*PatternConfig) *Rule {
 	rule := new(Rule)
 	rule.final = config.Final
-	pattern := NewDomainSuffixPattern("__internal__", "", nil)
+	pattern := NewDomainSuffixPattern("__internal__", DIRECT_POLICY, "", nil)
 	rule.patterns = append(rule.patterns, pattern)
 	for _, name := range config.Pattern {
 		if patternConfig, ok := patterns[name]; ok {
