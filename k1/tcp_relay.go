@@ -75,7 +75,7 @@ func (r *TCPRelay) handleConn(conn net.Conn) {
 	}
 
 	proxies := r.one.proxies
-	tunnel, err := proxies.Dial(proxy, remoteAddr)
+	tunnel, err := proxies.Dial("tcp", proxy, remoteAddr)
 	if err != nil {
 		conn.Close()
 		logger.Errorf("[tcp] dial %s by proxy %q failed: %s", remoteAddr, proxy, err)
