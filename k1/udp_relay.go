@@ -155,7 +155,7 @@ func (r *UDPRelay) Filter(wr io.Writer, ipPacket tcpip.IPv4Packet) {
 		ipPacket.SetDestinationIP(session.srcIP)
 		udpPacket.SetSourcePort(session.dstPort)
 		udpPacket.SetDestinationPort(session.srcPort)
-	} else if one.dnsTable.Contains(dstIP) {
+	} else if one.dnsTable.Contains(dstIP) { // is fake ip
 		// redirect to relay
 		isNew, port := r.nat.allocSession(srcIP, dstIP, srcPort, dstPort)
 
