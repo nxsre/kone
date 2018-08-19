@@ -9,6 +9,11 @@ By now, it supports:
 * linux
 * mac OS
 
+## Support protocols
+
+* tcp: http, https and socks5
+* udp: only socks5 with udp support
+
 ## Use
 
 Try finding how to use it by reading [config.example.ini](./config.example.ini)!
