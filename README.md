@@ -20,7 +20,11 @@ Try finding how to use it by reading [config.example.ini](./config.example.ini)!
 
 ## Web Status
 
-The default web status port is 9200 , just visit http://your_kone_ip:9200/ to check the kone status.
+The default web status port is 6789 , just visit http://your_kone_ip:6789/ to check the kone status.
+
+## Troubles
+
+[ ] if the network seems down after restart kone, you can try flush your local dns cache. eg `sudo dscacheutil -flushcache;sudo killall -HUP mDNSResponder;`
 
 ## License
 

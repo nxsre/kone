@@ -47,7 +47,6 @@ func (tun *TunDriver) AddRoutes(vals []string) {
 		_, subnet, _ := net.ParseCIDR(val)
 		if subnet != nil {
 			addRoute(name, subnet)
-			logger.Infof("add route %s by %s", val, name)
 		}
 	}
 }
