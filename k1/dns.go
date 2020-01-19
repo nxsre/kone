@@ -1,13 +1,9 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -43,12 +39,15 @@ func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
 
 		r, rtt, err := d.client.Exchange(r, ns)
 		if err != nil {
-			logger.Errorf("[dns] resolve %s on %s failed: %v", qname, ns, err)
+			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+				return
+			}
+			logger.Debugf("[dns] resolve %s on %s failed: %v", qname, ns, err)
 			return
 		}
 
 		if r.Rcode == dns.RcodeServerFailure {
-			logger.Errorf("[dns] resolve %s on %s failed: code %d", qname, ns, r.Rcode)
+			logger.Debugf("[dns] resolve %s on %s failed: code %d", qname, ns, r.Rcode)
 			return
 		}
 
@@ -81,7 +80,7 @@ func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
 	case r := <-msgCh:
 		return r, nil
 	default:
-		logger.Errorf("[dns] query %s failed", qname)
+		logger.Debugf("[dns] query %s failed", qname)
 		return nil, resolveErr
 	}
 }
@@ -99,6 +98,12 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	one := d.one
 
 	domain := dnsutil.TrimDomainName(r.Question[0].Name, ".")
+
+	// if is a reject domain
+	if one.rule.Reject(domain) {
+		return nil, errors.New(domain + "is a reject domain")
+	}
+
 	// if is a non-proxy-domain
 	if one.dnsTable.IsNonProxyDomain(domain) {
 		return d.resolve(r)
@@ -150,8 +155,11 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 		if proxy != "" {
 			if record := one.dnsTable.Set(domain, proxy); record != nil {
 				record.SetRealIP(msg)
+				logger.Errorf("[dns] ---------- %s is a proxy-domain via %s by ip", domain, proxy)
 				return record.Answer(r), nil
 			}
+		} else {
+			logger.Errorf("[dns] ---------- %s is a non-proxy-domain by ip", domain)
 		}
 	}
 

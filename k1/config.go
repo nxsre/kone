@@ -1,8 +1,3 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
@@ -41,12 +36,16 @@ type ProxyConfig struct {
 	Default bool
 }
 
+// https://manual.nssurge.com/policy.html
+// There are 3 types of policies: PROXY, DIRECT and REJECT
 type PatternConfig struct {
+	Policy string
 	Proxy  string
 	Scheme string
 	V      []string
 }
 
+// There are 5 types of rules: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, IP-COUNTRY and IP-CIDR
 type RuleConfig struct {
 	Pattern []string
 	Final   string
@@ -212,7 +211,7 @@ func ParseConfig(filename string) (*KoneConfig, error) {
 	cfg := new(KoneConfig)
 
 	// set default value
-	cfg.General.Network = "10.192.0.1/16"
+	cfg.General.Network = "198.18.0.1/15"
 
 	cfg.TCP.ListenPort = 82
 	cfg.TCP.NatPortStart = 10000

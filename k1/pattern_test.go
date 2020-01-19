@@ -1,15 +1,10 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
 	"net"
 	"testing"
 
-	"github.com/xjdrew/kone/tcpip"
+	"github.com/FlowerWrong/kone/tcpip"
 )
 
 func checkCases(t *testing.T, proxy string, pattern Pattern, cases map[interface{}]bool) {
@@ -24,9 +19,28 @@ func checkCases(t *testing.T, proxy string, pattern Pattern, cases map[interface
 	}
 }
 
+func TestDomainPattern(t *testing.T) {
+	proxy := "B"
+	pattern := NewDomainPattern("domain-keyword", "", proxy, []string{
+		"example.com",
+	})
+
+	cases := map[interface{}]bool{
+		"hk.com":          false,
+		"Example.com":     true,
+		"example.com":     true,
+		"api.example.com": false,
+		"1example.com":    false,
+		"example.hk":      false,
+		"example.1hk":     false,
+		"xample.com":      false,
+	}
+	checkCases(t, proxy, pattern, cases)
+}
+
 func TestDomainSuffixPattern(t *testing.T) {
 	proxy := "A"
-	pattern := NewDomainSuffixPattern("domin-suffix", proxy, []string{
+	pattern := NewDomainSuffixPattern("domain-suffix", "", proxy, []string{
 		"example.com",
 		"Hk",
 	})
@@ -43,7 +57,7 @@ func TestDomainSuffixPattern(t *testing.T) {
 
 func TestDomainKeywordPattern(t *testing.T) {
 	proxy := "B"
-	pattern := NewDomainKeywordPattern("domin-keyword", proxy, []string{
+	pattern := NewDomainKeywordPattern("domain-keyword", "", proxy, []string{
 		"example.com",
 		"Hk",
 	})
@@ -62,7 +76,7 @@ func TestDomainKeywordPattern(t *testing.T) {
 
 func TestIPCountryPattern(t *testing.T) {
 	proxy := "C"
-	pattern := NewIPCountryPattern("ip-country", proxy, []string{
+	pattern := NewIPCountryPattern("ip-country", "", proxy, []string{
 		"HK",
 		"US",
 	})
@@ -78,7 +92,7 @@ func TestIPCountryPattern(t *testing.T) {
 
 func TestIPCIDRPattern(t *testing.T) {
 	proxy := "D"
-	pattern := NewIPCIDRPattern("ip-cidr", proxy, []string{
+	pattern := NewIPCIDRPattern("ip-cidr", "", proxy, []string{
 		"192.168.100.1/16",
 		"10.18.0.1/24",
 		"172.16.0.1/32",

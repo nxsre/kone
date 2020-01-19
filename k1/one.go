@@ -1,15 +1,10 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
 	"net"
 
-	. "github.com/xjdrew/kone/internal"
-	"github.com/xjdrew/kone/tcpip"
+	. "github.com/FlowerWrong/kone/internal"
+	"github.com/FlowerWrong/kone/tcpip"
 )
 
 var logger = GetLogger()

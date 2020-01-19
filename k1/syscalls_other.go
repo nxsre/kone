@@ -1,8 +1,3 @@
-//
-//   date  : 2017-07-14
-//   author: xjdrew
-//
-
 // +build !linux,!darwin,!windows
 
 package k1

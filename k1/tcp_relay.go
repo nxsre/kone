@@ -1,8 +1,3 @@
-//
-//   date  : 2016-05-13
-//   author: xjdrew
-//
-
 package k1
 
 import (
@@ -10,7 +5,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/xjdrew/kone/tcpip"
+	"github.com/FlowerWrong/kone/tcpip"
 )
 
 type halfCloseConn interface {
@@ -80,7 +75,7 @@ func (r *TCPRelay) handleConn(conn net.Conn) {
 	}
 
 	proxies := r.one.proxies
-	tunnel, err := proxies.Dial(proxy, remoteAddr)
+	tunnel, err := proxies.Dial("tcp", proxy, remoteAddr)
 	if err != nil {
 		conn.Close()
 		logger.Errorf("[tcp] dial %s by proxy %q failed: %s", remoteAddr, proxy, err)

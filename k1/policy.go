@@ -1,0 +1,7 @@
+package k1
+
+const (
+	PROXY_POLICY  = "PROXY"
+	DIRECT_POLICY = "DIRECT"
+	REJECT_POLICY = "REJECT"
+)
