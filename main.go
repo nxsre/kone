@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/FlowerWrong/kone/internal"
-	"github.com/FlowerWrong/kone/k1"
+	. "github.com/soopsio/kone/internal"
+	"github.com/soopsio/kone/k1"
 )
 
 var VERSION = "0.2-dev"

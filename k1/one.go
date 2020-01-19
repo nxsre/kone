@@ -3,8 +3,8 @@ package k1
 import (
 	"net"
 
-	. "github.com/FlowerWrong/kone/internal"
-	"github.com/FlowerWrong/kone/tcpip"
+	. "github.com/soopsio/kone/internal"
+	"github.com/soopsio/kone/tcpip"
 )
 
 var logger = GetLogger()

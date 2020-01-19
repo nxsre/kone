@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/FlowerWrong/kone/geoip"
-	"github.com/FlowerWrong/kone/tcpip"
+	"github.com/soopsio/kone/geoip"
+	"github.com/soopsio/kone/tcpip"
 )
 
 const (

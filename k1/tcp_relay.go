@@ -5,7 +5,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/FlowerWrong/kone/tcpip"
+	"github.com/soopsio/kone/tcpip"
 )
 
 type halfCloseConn interface {

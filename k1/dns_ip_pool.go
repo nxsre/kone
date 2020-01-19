@@ -4,7 +4,7 @@ import (
 	"hash/adler32"
 	"net"
 
-	"github.com/FlowerWrong/kone/tcpip"
+	"github.com/soopsio/kone/tcpip"
 )
 
 const DnsIPPoolMaxSpace = 0x3ffff // 4*65535
