@@ -1,8 +1,8 @@
 package geoip
 
 import (
-	"github.com/maxmind/geoipupdate/pkg/geoipupdate"
-	"github.com/maxmind/geoipupdate/pkg/geoipupdate/database"
+	"github.com/maxmind/geoipupdate/v4/pkg/geoipupdate"
+	"github.com/maxmind/geoipupdate/v4/pkg/geoipupdate/database"
 	"github.com/pkg/errors"
 	"log"
 	"net/http"
