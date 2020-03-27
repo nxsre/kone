@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/soopsio/gosocks"
-	"github.com/soopsio/kone/tcpip"
-	socks5Proxy "github.com/soopsio/proxy"
+	"github.com/nxsre/gosocks"
+	"github.com/nxsre/kone/tcpip"
+	socks5Proxy "github.com/nxsre/proxy"
 )
 
 type UDPTunnel struct {

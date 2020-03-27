@@ -1,12 +1,13 @@
 package k1
 
 import (
+	jsoniter "github.com/json-iterator/go"
 	"net"
 	"sort"
 	"strings"
 
-	"github.com/soopsio/kone/geoip"
-	"github.com/soopsio/kone/tcpip"
+	"github.com/nxsre/kone/geoip"
+	"github.com/nxsre/kone/tcpip"
 )
 
 const (
@@ -19,9 +20,14 @@ const (
 
 type Pattern interface {
 	Name() string
+	Scheme() string
 	Policy() string
 	Proxy() string
+	Add(string)
+	Remove(string)
 	Match(val interface{}) bool
+	MarshalJSON() ([]byte, error)
+	//UnmarshalJSON(data []byte) error
 }
 
 // DOMAIN
@@ -54,6 +60,34 @@ func (p *DomainPattern) Match(val interface{}) bool {
 		return true
 	}
 	return false
+}
+
+func (p *DomainPattern) Add(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		val = strings.ToLower(val)
+		p.vals[val] = true
+	}
+}
+
+func (p *DomainPattern) Remove(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		val = strings.ToLower(val)
+		delete(p.vals, val)
+	}
+}
+
+func (p *DomainPattern) Scheme() string {
+	return schemeDomain
+}
+
+func (p *DomainPattern) MarshalJSON() ([]byte, error) {
+	return jsoniter.Marshal(map[string]interface{}{
+		"name":   p.name,
+		"policy": p.policy,
+		"proxy":  p.proxy,
+		"vals":   p.vals,
+		"schema": p.Scheme(),
+	})
 }
 
 func NewDomainPattern(name, policy, proxy string, vals []string) Pattern {
@@ -112,11 +146,32 @@ func (p *DomainSuffixPattern) Match(val interface{}) bool {
 	return false
 }
 
-func (p *DomainSuffixPattern) AddDomain(val string) {
+func (p *DomainSuffixPattern) Add(val string) {
 	if len(val) > 0 { // ignore empty suffix
 		val = strings.ToLower(val)
 		p.vals[val] = true
 	}
+}
+
+func (p *DomainSuffixPattern) Remove(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		val = strings.ToLower(val)
+		delete(p.vals, val)
+	}
+}
+
+func (p *DomainSuffixPattern) Scheme() string {
+	return schemeDomainSuffix
+}
+
+func (p *DomainSuffixPattern) MarshalJSON() ([]byte, error) {
+	return jsoniter.Marshal(map[string]interface{}{
+		"name":   p.name,
+		"policy": p.policy,
+		"proxy":  p.proxy,
+		"vals":   p.vals,
+		"schema": p.Scheme(),
+	})
 }
 
 func NewDomainSuffixPattern(name, policy, proxy string, vals []string) Pattern {
@@ -126,7 +181,7 @@ func NewDomainSuffixPattern(name, policy, proxy string, vals []string) Pattern {
 	p.proxy = proxy
 	p.vals = make(map[string]bool)
 	for _, val := range vals {
-		p.AddDomain(val)
+		p.Add(val)
 	}
 	return p
 }
@@ -165,6 +220,34 @@ func (p *DomainKeywordPattern) Match(val interface{}) bool {
 	return false
 }
 
+func (p *DomainKeywordPattern) Add(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		val = strings.ToLower(val)
+		p.vals[val] = true
+	}
+}
+
+func (p *DomainKeywordPattern) Remove(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		val = strings.ToLower(val)
+		delete(p.vals, val)
+	}
+}
+
+func (p *DomainKeywordPattern) Scheme() string {
+	return schemeDomainKeyword
+}
+
+func (p *DomainKeywordPattern) MarshalJSON() ([]byte, error) {
+	return jsoniter.Marshal(map[string]interface{}{
+		"name":   p.name,
+		"policy": p.policy,
+		"proxy":  p.proxy,
+		"vals":   p.vals,
+		"schema": p.Scheme(),
+	})
+}
+
 func NewDomainKeywordPattern(name, policy, proxy string, vals []string) Pattern {
 	p := new(DomainKeywordPattern)
 	p.name = name
@@ -172,10 +255,7 @@ func NewDomainKeywordPattern(name, policy, proxy string, vals []string) Pattern 
 	p.proxy = proxy
 	p.vals = make(map[string]bool)
 	for _, val := range vals {
-		val = strings.ToLower(val)
-		if len(val) > 0 { // ignore empty keyword
-			p.vals[val] = true
-		}
+		p.Add(val)
 	}
 	return p
 }
@@ -208,8 +288,37 @@ func (p *IPCountryPattern) Match(val interface{}) bool {
 	case net.IP:
 		country = geoip.QueryCountryByIP(ip)
 	}
+	logger.Debugf("proxy_name:%s,policy:%s,proxy:%s,values:%v,ip:%v,country:%s", p.Name(), p.Policy(), p.Proxy(), p.vals, val, country)
 
 	return p.vals[country]
+}
+
+func (p *IPCountryPattern) Add(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		val = strings.ToLower(val)
+		p.vals[val] = true
+	}
+}
+
+func (p *IPCountryPattern) Remove(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		val = strings.ToLower(val)
+		delete(p.vals, val)
+	}
+}
+
+func (p *IPCountryPattern) Scheme() string {
+	return schemeIPCountry
+}
+
+func (p *IPCountryPattern) MarshalJSON() ([]byte, error) {
+	return jsoniter.Marshal(map[string]interface{}{
+		"name":   p.name,
+		"policy": p.policy,
+		"proxy":  p.proxy,
+		"vals":   p.vals,
+		"schema": p.Scheme(),
+	})
 }
 
 func NewIPCountryPattern(name, policy, proxy string, vals []string) Pattern {
@@ -231,6 +340,14 @@ type IPRange struct {
 	Start uint32
 	End   uint32
 }
+
+func (p *IPRange) MarshalJSON() ([]byte, error) {
+	return jsoniter.Marshal(map[string]interface{}{
+		"start": tcpip.ConvertUint32ToIPv4(p.Start),
+		"end":   tcpip.ConvertUint32ToIPv4(p.End),
+	})
+}
+
 type IPRangeArray []IPRange
 
 func (a IPRangeArray) Len() int           { return len(a) }
@@ -288,20 +405,58 @@ func (p *IPCIDRPattern) Match(val interface{}) bool {
 	return false
 }
 
+func (p *IPCIDRPattern) Add(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		if _, ipNet, err := net.ParseCIDR(val); err == nil {
+			start := tcpip.ConvertIPv4ToUint32(ipNet.IP)
+			_end := start + ^tcpip.ConvertIPv4ToUint32(net.IP(ipNet.Mask))
+			// 判断是否已存在，不能重复添加记录
+			if p.vals.Contains(start+1) || p.vals.Contains(_end-1) {
+				return
+			}
+			p.vals = append(p.vals, IPRange{
+				Start: start,
+				End:   _end,
+			})
+		}
+	}
+}
+
+func (p *IPCIDRPattern) Remove(val string) {
+	if len(val) > 0 { // ignore empty suffix
+		if _, ipNet, err := net.ParseCIDR(val); err == nil {
+			start := tcpip.ConvertIPv4ToUint32(ipNet.IP)
+			_end := start + ^tcpip.ConvertIPv4ToUint32(net.IP(ipNet.Mask))
+			for k, v := range p.vals {
+				if v.Start == start && v.End == _end {
+					p.vals = append(p.vals[:k], p.vals[k+1:]...)
+				}
+			}
+		}
+	}
+}
+
+func (p *IPCIDRPattern) Scheme() string {
+	return schemeIPCIDR
+}
+
+func (p *IPCIDRPattern) MarshalJSON() ([]byte, error) {
+	return jsoniter.Marshal(map[string]interface{}{
+		"name":   p.name,
+		"policy": p.policy,
+		"proxy":  p.proxy,
+		"vals":   p.vals,
+		"schema": p.Scheme(),
+	})
+}
+
 func NewIPCIDRPattern(name, policy, proxy string, vals []string) Pattern {
 	p := new(IPCIDRPattern)
 	p.name = name
 	p.policy = policy
 	p.proxy = proxy
 	for _, val := range vals {
-		if _, ipNet, err := net.ParseCIDR(val); err == nil {
-			start := tcpip.ConvertIPv4ToUint32(ipNet.IP)
-			_end := start + ^tcpip.ConvertIPv4ToUint32(net.IP(ipNet.Mask))
-			p.vals = append(p.vals, IPRange{
-				Start: start,
-				End:   _end,
-			})
-		}
+		p.Add(val)
 	}
 
 	sort.Sort(p.vals)

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 //
 //   date  : 2019-08-29
 //   author: SUCHMOKUO
@@ -43,16 +42,7 @@ func addRoute(tun string, subnet *net.IPNet) error {
 		"-PolicyStore", "ActiveStore",
 		"-AddressFamily", "IPv4",
 		"-NextHop", tunNet)
-=======
-package k1
-
-import (
-	"net"
-	"os/exec"
-	"strings"
-
-	"github.com/songgao/water"
-)
+}
 
 func execCommand(name, sargs string) error {
 	args := strings.Split(sargs, " ")
@@ -63,7 +53,6 @@ func execCommand(name, sargs string) error {
 
 func addRoute(tun string, subnet *net.IPNet) error {
 	return nil
->>>>>>> upstream/master
 }
 
 func createTun(ip net.IP, mask net.IPMask) (*water.Interface, error) {
@@ -72,7 +61,6 @@ func createTun(ip net.IP, mask net.IPMask) (*water.Interface, error) {
 		Mask: mask,
 	}
 
-<<<<<<< HEAD
 	s := make([]byte, 4)
 	ip4 := ip.To4()
 	for i := range s {
@@ -80,8 +68,6 @@ func createTun(ip net.IP, mask net.IPMask) (*water.Interface, error) {
 	}
 	tunNet = net.IPv4(s[0], s[1], s[2], s[3]).String()
 
-=======
->>>>>>> upstream/master
 	ifce, err := water.New(water.Config{
 		DeviceType: water.TUN,
 		PlatformSpecificParams: water.PlatformSpecificParams{
@@ -94,7 +80,6 @@ func createTun(ip net.IP, mask net.IPMask) (*water.Interface, error) {
 		return nil, err
 	}
 
-<<<<<<< HEAD
 	logger.Infof("initializing %s, please wait...", ifce.Name())
 
 	err = initTun(ifce.Name(), ipNet, MTU)
@@ -163,12 +148,6 @@ func initTun(tun string, ipNet *net.IPNet, mtu int) (err error) {
 		"-AddressFamily", "IPv4")
 }
 
-=======
-	logger.Infof("create %s", ifce.Name())
-	return ifce, nil
-}
-
->>>>>>> upstream/master
 func fixTunIP(ip net.IP) net.IP {
 	return ip
 }

@@ -1,10 +1,12 @@
 package k1
 
 import (
-	"bytes"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/nxsre/kone/geoip"
+	"github.com/miekg/dns"
 	"html/template"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -222,19 +224,16 @@ type Manager struct {
 	proxies  map[string]*TrafficRecord
 }
 
-func handleWrapper(f func(io.Writer, *http.Request) error) func(http.ResponseWriter, *http.Request) {
+func handleWrapper(f func(http.ResponseWriter, *http.Request) error) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		w := bytes.NewBuffer(nil)
-		err := f(w, r)
+		err := f(rw, r)
 		if err != nil {
 			http.Error(rw, fmt.Sprintf("Internal server error: %s", err), http.StatusInternalServerError)
-		} else {
-			rw.Write(w.Bytes())
 		}
 	}
 }
 
-func (m *Manager) indexHandle(w io.Writer, r *http.Request) error {
+func (m *Manager) indexHandle(w http.ResponseWriter, r *http.Request) error {
 	var upload, download int64
 	for _, v := range m.proxies {
 		upload += v.Upload
@@ -259,7 +258,7 @@ func (m *Manager) indexHandle(w io.Writer, r *http.Request) error {
 	})
 }
 
-func (m *Manager) hostHandle(w io.Writer, r *http.Request) error {
+func (m *Manager) hostHandle(w http.ResponseWriter, r *http.Request) error {
 	name := strings.TrimPrefix(r.RequestURI, "/host/")
 	record, ok := m.hosts[name]
 	if ok {
@@ -283,7 +282,7 @@ func (m *Manager) hostHandle(w io.Writer, r *http.Request) error {
 	}
 }
 
-func (m *Manager) websiteHandle(w io.Writer, r *http.Request) error {
+func (m *Manager) websiteHandle(w http.ResponseWriter, r *http.Request) error {
 	name := strings.TrimPrefix(r.RequestURI, "/website/")
 	record, ok := m.websites[name]
 	if ok {
@@ -307,7 +306,7 @@ func (m *Manager) websiteHandle(w io.Writer, r *http.Request) error {
 	}
 }
 
-func (m *Manager) proxyHandle(w io.Writer, r *http.Request) error {
+func (m *Manager) proxyHandle(w http.ResponseWriter, r *http.Request) error {
 	var upload, download int64
 	for _, v := range m.proxies {
 		upload += v.Upload
@@ -321,7 +320,7 @@ func (m *Manager) proxyHandle(w io.Writer, r *http.Request) error {
 	})
 }
 
-func (m *Manager) dnsHandle(w io.Writer, r *http.Request) error {
+func (m *Manager) dnsHandle(w http.ResponseWriter, r *http.Request) error {
 	records := m.one.dnsTable.records
 
 	activeEntries, expiredEntires := 0, 0
@@ -341,6 +340,79 @@ func (m *Manager) dnsHandle(w io.Writer, r *http.Request) error {
 		"Now":            now,
 		"Records":        records,
 	})
+}
+
+func (m *Manager) geoipHandle(c *gin.Context) {
+	host := c.Param("host")
+	msg := new(dns.Msg)
+	msg.Id = dns.Id()
+	msg.RecursionDesired = true
+	msg.Question = make([]dns.Question, 1)
+	msg.Question[0] = dns.Question{dns.Fqdn(host), dns.TypeA, dns.ClassINET}
+
+	//for _,ns:=range m.one.dns.nameservers{
+	//m.one.dns.clients.Exchange(msg,ns)
+	//}
+	//
+	res, err := m.one.dns.resolve(msg)
+	if err != nil {
+		c.Writer.WriteString(err.Error())
+		return
+	}
+
+	geores:=map[string]geoip.GeoLite2Country{}
+
+	for _, item := range res.Answer {
+		switch answer := item.(type) {
+		case *dns.A:
+			//c.Writer.WriteString(fmt.Sprintf( "%s\n",answer))
+			geores[answer.A.String()]=geoip.QueryConuntryByIPDetails(answer.A)
+
+		case *dns.CNAME:
+		default:
+		}
+	}
+	jsoniter.NewEncoder(c.Writer).Encode(geores)
+}
+
+func (m *Manager) apiHandle(c *gin.Context) {
+	if c.Request.Method == "GET" {
+		if dns := c.Query("dns"); dns != "" {
+			bs, _ := jsoniter.Marshal(map[string]interface{}{
+				"records":         m.one.dnsTable.records,
+				"ip2Domain":       m.one.dnsTable.ip2Domain,
+				"ipPool":          m.one.dnsTable.ipPool,
+				"nonProxyDomains": m.one.dnsTable.nonProxyDomains,
+			})
+			c.Writer.Write(bs)
+			return
+		}
+		bs, _ := jsoniter.Marshal(m.one.rule.patterns)
+		c.Writer.Write(bs)
+	}
+
+	if c.Request.Method == "DELETE" {
+		name := c.Query("name")
+		val := c.Query("val")
+
+		for _, pattern := range m.one.rule.patterns {
+			if pattern.Name() == name {
+				pattern.Remove(val)
+			}
+		}
+	}
+
+	if c.Request.Method == "PUT" {
+		name := c.Query("name")
+		val := c.Query("val")
+
+		for _, pattern := range m.one.rule.patterns {
+			if pattern.Name() == name {
+				pattern.Add(val)
+			}
+		}
+	}
+
 }
 
 // statistical data api
@@ -389,15 +461,27 @@ func (m *Manager) consumeData() {
 }
 
 func (m *Manager) Serve() error {
-	http.HandleFunc("/", handleWrapper(m.indexHandle))
-	http.HandleFunc("/host/", handleWrapper(m.hostHandle))
-	http.HandleFunc("/website/", handleWrapper(m.websiteHandle))
-	http.HandleFunc("/proxy/", handleWrapper(m.proxyHandle))
-	http.HandleFunc("/dns/", handleWrapper(m.dnsHandle))
+	r := engine()
+	r.GET("/", gin.WrapF(handleWrapper(m.indexHandle)))
+	r.GET("/geoip/:host", m.geoipHandle)
+	rg := r.Group("/")
+	rg.Use(AuthRequired)
+	{
+		rg.GET("/host/", gin.WrapF(handleWrapper(m.hostHandle)))
+		rg.GET("/website/", gin.WrapF(handleWrapper(m.websiteHandle)))
+		rg.GET("/proxy/", gin.WrapF(handleWrapper(m.proxyHandle)))
+		rg.GET("/dns/", gin.WrapF(handleWrapper(m.dnsHandle)))
+		rg.GET("/host/:host", gin.WrapF(handleWrapper(m.hostHandle)))
+		rg.GET("/website/:site", gin.WrapF(handleWrapper(m.websiteHandle)))
+		rg.GET("/proxy/:proxy", gin.WrapF(handleWrapper(m.proxyHandle)))
+		rg.GET("/dns/:dns", gin.WrapF(handleWrapper(m.dnsHandle)))
+		rg.Any("/api/", m.apiHandle)
+	}
+
 	go m.consumeData()
 
 	logger.Infof("[manager] listen on: %s", m.listen)
-	return http.ListenAndServe(m.listen, nil)
+	return r.Run(m.listen)
 }
 
 func NewManager(one *One, cfg ManagerConfig) *Manager {

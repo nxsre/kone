@@ -3,7 +3,7 @@ package k1
 import (
 	"io"
 
-	"github.com/soopsio/kone/tcpip"
+	"github.com/nxsre/kone/tcpip"
 )
 
 type PacketFilter interface {

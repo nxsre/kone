@@ -4,7 +4,7 @@ import (
 	"hash/adler32"
 	"net"
 
-	"github.com/soopsio/kone/tcpip"
+	"github.com/nxsre/kone/tcpip"
 )
 
 const DnsIPPoolMaxSpace = 0x3ffff // 4*65535
@@ -55,8 +55,10 @@ func (pool *DnsIPPool) Alloc(tips string) net.IP {
 }
 
 func NewDnsIPPool(ip net.IP, subnet *net.IPNet) *DnsIPPool {
+	// 地址池的起始地址为网段的第一个IP+1
 	base := tcpip.ConvertIPv4ToUint32(subnet.IP) + 1
-	max := base + ^tcpip.ConvertIPv4ToUint32(net.IP(subnet.Mask))
+	// 地址池的结束地址为网段的广播IP+1
+	max := base + ^tcpip.ConvertIPv4ToUint32(net.IP(subnet.Mask)) - 1
 
 	// space should not over 0x3ffff
 	space := max - base

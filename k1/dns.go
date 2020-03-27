@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -24,8 +26,20 @@ var resolveErr = errors.New("resolve error")
 type Dns struct {
 	one         *One
 	server      *dns.Server
-	client      *dns.Client
+	clients     DnsClients
 	nameservers []string
+}
+
+type DnsClient struct {
+	client *dns.Client
+	ns     NameServer
+}
+
+type DnsClients map[string]*DnsClient // map["tcp(8.8.8.8:53)"]*dns.Client
+
+func (c DnsClients) Exchange(r *dns.Msg, ns string) (*dns.Msg, time.Duration, error) {
+	n := c[ns]
+	return n.client.Exchange(r, n.ns.String())
 }
 
 func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
@@ -36,8 +50,8 @@ func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
 
 	Q := func(ns string) {
 		defer wg.Done()
-
-		r, rtt, err := d.client.Exchange(r, ns)
+		logger.Debugf("nameserver:%s qname:%s", ns, qname)
+		r, rtt, err := d.clients.Exchange(r, ns)
 		if err != nil {
 			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
 				return
@@ -106,17 +120,20 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 
 	// if is a non-proxy-domain
 	if one.dnsTable.IsNonProxyDomain(domain) {
+		logger.Infof("IsNonProxyDomain: %v", domain)
 		return d.resolve(r)
 	}
 
 	// if have already hijacked
 	record := one.dnsTable.Get(domain)
 	if record != nil {
+		logger.Infof("have already hijacked: %v", domain)
 		return record.Answer(r), nil
 	}
 
 	// match by domain
 	matched, proxy := one.rule.Proxy(domain)
+	logger.Infof("matched:%v, proxy:%s", matched, proxy)
 
 	// if domain use proxy
 	if matched && proxy != "" {
@@ -155,11 +172,11 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 		if proxy != "" {
 			if record := one.dnsTable.Set(domain, proxy); record != nil {
 				record.SetRealIP(msg)
-				logger.Errorf("[dns] ---------- %s is a proxy-domain via %s by ip", domain, proxy)
+				logger.Infof("[dns] ---------- %s is a proxy-domain via %s by ip", domain, proxy)
 				return record.Answer(r), nil
 			}
 		} else {
-			logger.Errorf("[dns] ---------- %s is a non-proxy-domain by ip", domain)
+			logger.Infof("[dns] ---------- %s is a non-proxy-domain by ip", domain)
 		}
 	}
 
@@ -179,6 +196,7 @@ func isIPv4Query(q dns.Question) bool {
 
 func (d *Dns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	isIPv4 := isIPv4Query(r.Question[0])
+	logger.Infof("remote_addr:%s, r: %+v   isIPv4:%v", w.RemoteAddr(), r.Question, isIPv4)
 
 	var msg *dns.Msg
 	var err error
@@ -190,6 +208,7 @@ func (d *Dns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 
 	if err != nil {
+		logger.Errorf("%e", err)
 		dns.HandleFailed(w, r)
 	} else {
 		w.WriteMsg(msg)
@@ -214,15 +233,67 @@ func NewDns(one *One, cfg DnsConfig) (*Dns, error) {
 		WriteTimeout: time.Duration(cfg.DnsWriteTimeout) * time.Second,
 	}
 
-	client := &dns.Client{
-		Net:          "udp",
-		UDPSize:      cfg.DnsPacketSize,
-		ReadTimeout:  time.Duration(cfg.DnsReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.DnsWriteTimeout) * time.Second,
+	d.server = server
+	d.nameservers = cfg.Nameserver
+	d.clients = GetDnsClients(cfg)
+
+	return d, nil
+}
+
+func GetDnsClients(cfg DnsConfig) ( DnsClients) {
+	clients := make(DnsClients)
+	for _, ns := range cfg.Nameserver {
+		nameserver := parseNs(ns)
+		clients[ns] = &DnsClient{
+			client: &dns.Client{
+				Net:          nameserver.Protocol,
+				UDPSize:      cfg.DnsPacketSize,
+				ReadTimeout:  time.Duration(cfg.DnsReadTimeout) * time.Second,
+				WriteTimeout: time.Duration(cfg.DnsWriteTimeout) * time.Second,
+			},
+			ns: nameserver,
+		}
+	}
+	return clients
+}
+
+type NameServer struct {
+	Protocol string
+	Addr     string
+	Port     int
+}
+
+func (ns *NameServer) String() string {
+	return fmt.Sprintf("%s:%d", ns.Addr, ns.Port)
+}
+
+func parseNs(ns string) NameServer {
+	re := regexp.MustCompile(`(?P<protocol>[a-z\-]+)?\(?(?P<addr>[0-9\.]+)(:(?P<port>\d+))?\)?`)
+	match := re.FindStringSubmatch(ns)
+	groupNames := re.SubexpNames()
+
+	result := make(map[string]string)
+
+	// 转换为map
+	for i, name := range groupNames {
+		if i != 0 && name != "" { // 第一个分组为空（也就是整个匹配）
+			result[name] = match[i]
+		}
 	}
 
-	d.server = server
-	d.client = client
-	d.nameservers = cfg.Nameserver
-	return d, nil
+	protocol := result["protocol"]
+	if protocol != "tcp" && protocol != "tcp-tls" {
+		protocol = "udp"
+	}
+
+	port, _ := strconv.Atoi(result["port"])
+	if port == 0 {
+		port = 53
+	}
+
+	return NameServer{
+		Protocol: protocol,
+		Addr:     result["addr"],
+		Port:     port,
+	}
 }

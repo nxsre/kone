@@ -8,7 +8,7 @@ type Rule struct {
 func (rule *Rule) DirectDomain(domain string) {
 	logger.Debugf("[rule] add direct domain: %s", domain)
 	pattern := rule.patterns[0].(*DomainSuffixPattern)
-	pattern.AddDomain(domain)
+	pattern.Add(domain)
 }
 
 func (rule *Rule) Reject(val interface{}) bool {
@@ -28,6 +28,8 @@ func (rule *Rule) Proxy(val interface{}) (bool, string) {
 			proxy := pattern.Proxy()
 			logger.Debugf("[rule] %v -> %s: proxy %q", val, pattern.Name(), proxy)
 			return true, proxy
+		}else {
+			logger.Debugf("[rule] %v -> %s: not match", val, pattern.Name())
 		}
 	}
 	logger.Debugf("[rule] %v -> final: proxy %q", val, rule.final)

@@ -176,9 +176,9 @@ func (cfg *KoneConfig) fixDns() error {
 		if i := strings.IndexByte(nameserver, ':'); i < 0 {
 			server = fmt.Sprintf("%s:%d", nameserver, dnsDefaultPort)
 		}
-		if _, err := net.ResolveUDPAddr("udp", server); err != nil {
-			return fmt.Errorf("[check dns] invalid backend name server: %s", nameserver)
-		}
+		//if _, err := net.ResolveUDPAddr("udp", server); err != nil {
+		//	return fmt.Errorf("[check dns] invalid backend name server: %s", nameserver)
+		//}
 		dns.Nameserver[index] = server
 	}
 	return nil
